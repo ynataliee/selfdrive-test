@@ -8,6 +8,7 @@
 * File:: followLine.c
 *
 * Description:: This program uses threads to read sensor data 
+
 * from the TCRT5000 Line Sensor and the IR Avoidance Sensor.
 **************************************************************/
 
@@ -30,9 +31,9 @@ volatile int lineSensorVal;
 volatile int obstacleSensorVal;
 
 // NEW
-#define RIGHT 26 //BCM pin
-#define MIDDLE 13 //BCM pin
-#define LEFT 6 //BCM pin
+#define RIGHT 6 //BCM pin
+
+#define LEFT 13 //BCM pin
 
 // NEW 
 volatile int rightVal;
@@ -76,15 +77,6 @@ void * readSensor(void* args){
                         	leftVal = 1;
                 	}
 		}
-		else if(*pinNumber == MIDDLE){
-			// update sensor state values 
-                	if(gpioRead(*pinNumber) == 0){
-                        	middleVal = 0;
-                	}
-                	else{
-                        	middleVal = 1;
-                	}
-		}
 			
         }
 	// to eliminate no return on non-void function warning when compiling
@@ -97,7 +89,6 @@ int main(int argc, char*argv[]){
 
 	int rightPin = RIGHT;
 	int leftPin = LEFT;
-	int middlePin = MIDDLE;
 
 	// prepare the gpio pins to be used 
         if(gpioInitialise()< 0){
@@ -119,18 +110,11 @@ int main(int argc, char*argv[]){
                 return 1;
         }
 
-	// setting middle sensor pin to input mode
-	if(gpioSetMode(MIDDLE, PI_INPUT)!= 0){
-                printf("could not set echo pin\n");
-                gpioTerminate();
-                return 1;
-        }
-
 	// setting up callback handler function for ctrl c
 	signal(SIGINT, handler);
 
 	// to hold thread ids 
-	pthread_t rightSensor, leftSensor, middleSensor;
+	pthread_t rightSensor, leftSensor;
 
 	// creating thread that monitors line sensor
 	int iret1 = pthread_create( &rightSensor, NULL, &readSensor, (void*)(&rightPin));
@@ -144,32 +128,21 @@ int main(int argc, char*argv[]){
         	printf("failed to create obstacle sensor thread\n");
     	}
 
-	// creating thread that monitors obstacle sensor 
-    	int iret3 = pthread_create( &middleSensor, NULL, &readSensor, (void*)(&middlePin));
-	if(iret3 != 0){
-        	printf("failed to create obstacle sensor thread\n");
-    	}
-
 	// continuously check the values of the sensors and display 
 	// if there are obstacles and if sensor is on the line
 	while(1){
 		if(rightVal == 1){
-			printf("OFF the line\n");
+			printf(" RIGHT ON the line\n");
+			// Turn right until rightVal turns zero
 		}
 		else{
-			printf("ON the line\n");
+			printf(" RIGHT OFF the line\n");
 		}
 		if(leftVal == 1){
-			printf("OFF the line\n");
+			printf(" LEFT ON the line\n");
 		}
 		else{
-			printf("ON the line\n");
-		}
-		if(middleVal == 1){
-			printf("OFF the line\n");
-		}
-		else{
-			printf("ON the linen");
+			printf(" LEFT OFF the line\n");
 		}
 		time_sleep(1);
 	}
@@ -178,7 +151,6 @@ int main(int argc, char*argv[]){
 	// wait for threads to finish 
 	pthread_join(rightSensor, NULL);
         pthread_join(leftSensor, NULL);
-	pthread_join(middleSensor, NULL);
 	
 	return 0;
 }
